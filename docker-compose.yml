@@ -2,7 +2,8 @@ version: '3'
 
 services:
   app:
-    build: .
-    command: /bin/bash
+    image: oznakn/ceng519
+    container_name: ceng519
+    command: tail -F anything
     volumes:
       - .:/development/ceng519
