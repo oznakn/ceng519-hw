@@ -16,7 +16,7 @@ ENV LIBRARY_PATH="/lib:/usr/lib" \
     PATH="/opt/poetry/bin:$PATH"
 
 RUN apt update -yyq && apt upgrade -yyq \
-    && apt install -yyq python3 python3-dev python3-pip software-properties-common nano vim rsync apt-utils build-essential git cmake curl wget libboost-all-dev libprotobuf-dev protobuf-compiler clang \
+    && apt install -yyq python3 python3-dev python3-pip python3-setuptools python3-venv software-properties-common nano vim rsync apt-utils build-essential git cmake curl wget libboost-all-dev libprotobuf-dev protobuf-compiler clang \
     && update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100 \
     && update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100 \
     && pip3 --no-cache-dir install --upgrade pip
