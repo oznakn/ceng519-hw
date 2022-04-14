@@ -1,0 +1,7 @@
+{
+	"name": "CENG519",
+	"context": "..",
+	"dockerFile": "../Dockerfile",
+	"settings": {},
+	"extensions": []
+}
