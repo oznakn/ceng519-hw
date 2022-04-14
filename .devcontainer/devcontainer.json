@@ -1,7 +1,6 @@
 {
-	"name": "CENG519",
-	"context": "..",
-	"dockerFile": "../Dockerfile",
+	"name": "ceng519",
+	"image": "oznakn/ceng519",
 	"settings": {},
 	"extensions": []
 }
