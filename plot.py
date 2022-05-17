@@ -49,7 +49,6 @@ for metric in metrics:
 
     plt.savefig(f"results/{metric}.png")
 
-    fig = plt.figure()
     plt.figure().clear()
     plt.close()
     plt.cla()
