@@ -28,8 +28,10 @@ def boruvka(nodes, edges):
     while num_trees > 1:
         cheapest = [-1 for _ in range(len(nodes))]
 
-        for i in range(len(edges)):
-            u, v, w = edges[i]
+        for i in range(0, len(edges), 3):
+            u = edges[i]
+            v = edges[i + 1]
+            w = edges[i + 2]
 
             set1 = find(parent, u)
             set2 = find(parent, v)
@@ -62,14 +64,14 @@ def boruvka(nodes, edges):
 
 if __name__ == '__main__':
     nodes = [0, 1, 2, 3]
-    edges = [[0, 1, 10], [0, 2, 6], [0, 3, 5], [1, 3, 15], [2, 3, 4]]
+    edges = [0, 1, 10, 0, 2, 6, 0, 3, 5, 1, 3, 15, 2, 3, 4]
 
     result = boruvka(nodes, edges)
     print("total edge, weight", result)
     assert result == (3, 19)
 
     nodes = [0, 1, 2, 3, 4]
-    edges = [[0, 1, 8], [0, 2, 5], [1, 2, 9], [1, 3, 11], [2, 3, 15], [2, 4, 10], [3, 4, 7]]
+    edges = [0, 1, 8, 0, 2, 5, 1, 2, 9, 1, 3, 11, 2, 3, 15, 2, 4, 10, 3, 4, 7]
 
     result = boruvka(nodes, edges)
     print("total edge, weight", result)
