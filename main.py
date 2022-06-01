@@ -27,9 +27,9 @@ def serializeGraphZeroOne(G, vec_size):
     for row in range(n):
         for column in range(n):
             if G.has_edge(row, column): #  or row == column# I assumed the vertices are connected to themselves
-                weight = 1
+                weight = 2
             else:
-                weight = 0
+                weight = 1
 
             graph_weight_list.append(weight)
 
@@ -50,21 +50,22 @@ def printGraph(graph, n):
 
 # Eva requires special input, this function prepares the eva input
 # Eva will then encrypt them
-def prepareInput(n, m):
+def prepareInput(n, vec_size):
     input = {}
 
-    GG = generateGraph(n, 3, 0.5)
+    G = generateGraph(n, 3, 0.5)
 
-    graph_weight_list, graph_dict = serializeGraphZeroOne(GG,m)
+    graph_weight_list, graph_dict = serializeGraphZeroOne(G, vec_size)
     input['Graph'] = graph_weight_list
 
     return input
 
 # you can other parameters using global variables !!! do not change the signature of this function
-def graph_boruvka(graph):
-    reval = graph<<1 ## Check what kind of operators are there in EVA, this is left shift
+def graph_boruvka(graph, graph_size):
+    reval = 0
 
-    print(dir(reval))
+    for i in range(graph_size):
+        reval += pow(graph<<i, 2)
 
     # Note that you cannot compute everything using EVA/CKKS
     # For instance, comparison is not possible
@@ -103,7 +104,7 @@ def simulate(n):
     eva_prog = EvaProgramDriver("graph_boruvka", vec_size=m, n=n)
     with eva_prog:
         graph = Input('Graph')
-        reval = graph_boruvka(graph)
+        reval = graph_boruvka(graph, n)
         Output('ReturnedValue', reval)
 
     eva_prog.set_output_ranges(30)
