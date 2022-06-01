@@ -6,71 +6,43 @@ from eva.ckks import CKKSCompiler
 from eva.seal import generate_keys
 from eva.metric import valuation_mse
 
-# Using networkx, generate a random graph
-# You can change the way you generate the graph
-def generateGraph(n: int, k: int, p: int):
+def generate_graph(n: int, k: int, p: int):
     # ws = nx.cycle_graph(n)
     G = nx.watts_strogatz_graph(n, k, p)
+
     return G
 
-# If there is an edge between two vertices its weight is 1 otherwise it is zero
-# You can change the weight assignment as required
-# Two dimensional adjacency matrix is represented as a vector
-# Assume there are n vertices
-# (i,j)th element of the adjacency matrix corresponds to (i*n + j)th element in the vector representations
-def serializeGraphZeroOne(G, vec_size):
-    graph_weight_list = []
-    graph_dict = {}
+def serialize_graph(G, vec_size):
+    edge_list = []
 
-    n = G.size()
-
-    for row in range(n):
-        for column in range(n):
+    for row in range(G.size()):
+        for column in range(G.size()):
             if G.has_edge(row, column): #  or row == column# I assumed the vertices are connected to themselves
-                weight = 2
-            else:
-                weight = 1
+                edge_list += [row, column, 1]
 
-            graph_weight_list.append(weight)
+    for _ in range(vec_size - len(edge_list)):
+        edge_list.append(0)
 
-            graph_dict[f"{row}-{column}"] = [weight] # EVA requires str:listoffloat
-
-    # EVA vector size has to be large, if the vector representation of the graph is smaller, fill the eva vector with zeros
-    for _ in range(vec_size - n*n):
-        graph_weight_list.append(0.0)
-
-    return graph_weight_list, graph_dict
-
-# To display the generated graph
-def printGraph(graph, n):
-    for row in range(n):
-        for column in range(n):
-            print("{:.5f}".format(graph[row*n+column]), end = '\t')
-        print()
+    return edge_list
 
 # Eva requires special input, this function prepares the eva input
 # Eva will then encrypt them
-def prepareInput(n, vec_size):
+def prepare_input(n, vec_size):
     input = {}
 
-    G = generateGraph(n, 3, 0.5)
+    G = generate_graph(n, 3, 0.5)
 
-    graph_weight_list, graph_dict = serializeGraphZeroOne(G, vec_size)
-    input['Graph'] = graph_weight_list
+    edge_list = serialize_graph(G, vec_size)
+    input['Edges'] = edge_list
 
     return input
 
-# you can other parameters using global variables !!! do not change the signature of this function
 def graph_boruvka(graph, graph_size):
     reval = 0
 
     for i in range(graph_size):
         reval += pow(graph<<i, 2)
 
-    # Note that you cannot compute everything using EVA/CKKS
-    # For instance, comparison is not possible
-    # You can add, subtract, multiply, negate, shift right/left
-    # You will have to implement an interface with the trusted entity for comparison (send back the encrypted values, push the trusted entity to compare and get the comparison output)
     return reval
 
 # Do not change this
@@ -99,11 +71,11 @@ def simulate(n):
     config['lazy_relinearize'] = 'true'
     config['rescaler'] = 'always'
     config['balance_reductions'] = 'true'
-    inputs = prepareInput(n, m)
+    inputs = prepare_input(n, m)
 
     eva_prog = EvaProgramDriver("graph_boruvka", vec_size=m, n=n)
     with eva_prog:
-        graph = Input('Graph')
+        graph = Input('Edges')
         reval = graph_boruvka(graph, n)
         Output('ReturnedValue', reval)
 
