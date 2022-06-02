@@ -32,12 +32,19 @@ def serialize_graph(G):
     node_count = G.size()
     total_edge_count = 0
 
+    used_w = set()
+
     adj_matrix = [0 for _ in range(node_count*node_count)]
 
     for row in range(node_count):
         for column in range(node_count):
             if G.has_edge(row, column):
-                adj_matrix[row*node_count + column] = random.randint(1, 25)
+                w = random.randint(1, 300)
+                while w in used_w:
+                    w = random.randint(1, 300)
+
+                used_w.add(w)
+                adj_matrix[row*node_count + column] = w
                 total_edge_count += 1
 
     print('created a graph with total edge count: ', total_edge_count)
@@ -222,41 +229,3 @@ def simulate_with_graph(node_count, adj_matrix):
             print (f"Edge {u}-{v} with weight {w} included in MST")
 
     return num_total_edge, total_weight, collected_data1, collected_data2, collected_data3
-
-def simulate_random_graph(node_count):
-    G = generate_graph(node_count, 3, 0.5)
-    adj_matrix = serialize_graph(G)
-
-    return simulate_with_graph(node_count, adj_matrix)
-
-RESULT_FILE_HEADERS = [
-    ["node_count", "compilation_time", "keygen_time"],
-    ["node_count", "enc_time", "execute_time", "dec_time", "ref_time", "mse"],
-    ["node_count", "enc_time", "execute_time", "dec_time", "ref_time", "mse"],
-]
-
-if __name__ == "__main__":
-    num_sim = 1 # 3
-
-    print("Simulation started")
-
-    collected_data = [[], [], []]
-
-    for node_count in range(36, 64, 4):
-        for _ in range(num_sim):
-            num_total_edge, total_weight, collected_data1, collected_data2, collected_data3 = simulate_random_graph(node_count)
-
-            collected_data[0] += collected_data1
-            collected_data[1] += collected_data2
-            collected_data[2] += collected_data3
-
-    ts = int(datetime.timestamp(datetime.now()))
-
-    os.mkdir(f"results_stage2/{ts}")
-
-    for i in range(3):
-        with open(f"results_stage2/{ts}/results{i}.csv", "w") as csv_file:
-            w = csv.DictWriter(csv_file, fieldnames=RESULT_FILE_HEADERS[i])
-            w.writeheader()
-            w.writerows(collected_data[i])
-

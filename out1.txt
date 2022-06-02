@@ -1,0 +1,128 @@
+test for raw with node 4
+Edge 0-3 with weight 5 included in MST
+Edge 0-1 with weight 10 included in MST
+Edge 2-3 with weight 4 included in MST
+test for fhe with node 4
+Will start simulation for  4
+Edge 0-1 with weight 10 included in MST
+Edge 0-3 with weight 5 included in MST
+Edge 2-3 with weight 4 included in MST
+test for raw with node 5
+Edge 0-2 with weight 5 included in MST
+Edge 0-1 with weight 8 included in MST
+Edge 3-4 with weight 7 included in MST
+Edge 2-4 with weight 10 included in MST
+test for fhe with node 5
+Will start simulation for  5
+Edge 0-1 with weight 8 included in MST
+Edge 0-2 with weight 5 included in MST
+Edge 3-4 with weight 7 included in MST
+Edge 2-4 with weight 10 included in MST
+created a graph with total edge count:  10
+Will start simulation for  5
+Edge 0-1 with weight 5 included in MST
+Edge 0-2 with weight 6 included in MST
+Edge 0-4 with weight 9 included in MST
+Edge 2-3 with weight 6 included in MST
+Edge 0-1 with weight 5 included in MST
+Edge 0-2 with weight 6 included in MST
+Edge 2-3 with weight 6 included in MST
+Edge 0-4 with weight 9 included in MST
+(4, 26) (4, 26)
+1733.2817559999967 0.1766459999998915
+created a graph with total edge count:  20
+Will start simulation for  10
+Edge 0-1 with weight 25 included in MST
+Edge 2-4 with weight 22 included in MST
+Edge 3-8 with weight 10 included in MST
+Edge 7-5 with weight 3 included in MST
+Edge 7-6 with weight 2 included in MST
+Edge 8-1 with weight 13 included in MST
+Edge 8-9 with weight 7 included in MST
+Edge 9-4 with weight 8 included in MST
+Edge 4-5 with weight 15 included in MST
+Edge 0-1 with weight 25 included in MST
+Edge 8-1 with weight 13 included in MST
+Edge 2-4 with weight 22 included in MST
+Edge 3-8 with weight 10 included in MST
+Edge 9-4 with weight 8 included in MST
+Edge 7-5 with weight 3 included in MST
+Edge 7-6 with weight 2 included in MST
+Edge 8-9 with weight 7 included in MST
+Edge 4-5 with weight 15 included in MST
+(9, 105) (9, 105)
+13823.865095000201 0.4590210000969819
+created a graph with total edge count:  30
+Will start simulation for  15
+Edge 0-1 with weight 11 included in MST
+Edge 3-2 with weight 1 included in MST
+Edge 3-6 with weight 3 included in MST
+Edge 4-6 with weight 5 included in MST
+Edge 5-9 with weight 5 included in MST
+Edge 6-14 with weight 3 included in MST
+Edge 7-8 with weight 23 included in MST
+Edge 8-1 with weight 13 included in MST
+Edge 9-11 with weight 6 included in MST
+Edge 10-11 with weight 9 included in MST
+Edge 12-13 with weight 8 included in MST
+Edge 1-2 with weight 15 included in MST
+Edge 3-5 with weight 8 included in MST
+Edge 14-13 with weight 22 included in MST
+Edge 0-1 with weight 11 included in MST
+Edge 3-2 with weight 1 included in MST
+Edge 4-6 with weight 5 included in MST
+Edge 5-9 with weight 5 included in MST
+Edge 3-6 with weight 3 included in MST
+Edge 7-8 with weight 23 included in MST
+Edge 8-1 with weight 13 included in MST
+Edge 10-11 with weight 9 included in MST
+Edge 9-11 with weight 6 included in MST
+Edge 12-13 with weight 8 included in MST
+Edge 6-14 with weight 3 included in MST
+Edge 3-5 with weight 8 included in MST
+Edge 1-2 with weight 15 included in MST
+Edge 14-13 with weight 22 included in MST
+(14, 132) (14, 132)
+35122.23136500006 0.4990090001228964
+created a graph with total edge count:  40
+Will start simulation for  20
+Edge 0-1 with weight 7 included in MST
+Edge 4-3 with weight 17 included in MST
+Edge 5-4 with weight 5 included in MST
+Edge 8-7 with weight 1 included in MST
+Edge 10-2 with weight 9 included in MST
+Edge 10-9 with weight 10 included in MST
+Edge 11-18 with weight 14 included in MST
+Edge 12-15 with weight 7 included in MST
+Edge 14-8 with weight 9 included in MST
+Edge 14-11 with weight 9 included in MST
+Edge 15-6 with weight 11 included in MST
+Edge 16-17 with weight 7 included in MST
+Edge 17-12 with weight 6 included in MST
+Edge 19-13 with weight 5 included in MST
+Edge 1-2 with weight 21 included in MST
+Edge 9-8 with weight 11 included in MST
+Edge 14-13 with weight 19 included in MST
+Edge 16-5 with weight 9 included in MST
+Edge 6-14 with weight 15 included in MST
+Edge 0-1 with weight 7 included in MST
+Edge 10-2 with weight 9 included in MST
+Edge 4-3 with weight 17 included in MST
+Edge 5-4 with weight 5 included in MST
+Edge 15-6 with weight 11 included in MST
+Edge 8-7 with weight 1 included in MST
+Edge 10-9 with weight 10 included in MST
+Edge 14-11 with weight 9 included in MST
+Edge 17-12 with weight 6 included in MST
+Edge 19-13 with weight 5 included in MST
+Edge 14-8 with weight 9 included in MST
+Edge 12-15 with weight 7 included in MST
+Edge 16-17 with weight 7 included in MST
+Edge 11-18 with weight 14 included in MST
+Edge 1-2 with weight 21 included in MST
+Edge 16-5 with weight 9 included in MST
+Edge 9-8 with weight 11 included in MST
+Edge 14-13 with weight 19 included in MST
+Edge 6-14 with weight 15 included in MST
+(19, 192) (19, 192)
+103946.51427500002 0.7864199997129617
