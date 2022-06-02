@@ -136,16 +136,13 @@ def simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
 
     return result
 
-def simulate(node_count):
+def simulate_with_graph(node_count, adj_matrix):
     print("Will start simulation for ", node_count)
 
     compiled_func, public_ctx, secret_ctx, signature = prepare_simulation(node_count)
 
-    G = generate_graph(node_count, 3, 0.5)
-    adj_matrix = serialize_graph(G)
-
     parent = [i for i in range(node_count)]
-    rank = [0 for i in range(node_count)]
+    rank = [0 for _ in range(node_count)]
     cheapest = [-1 for _ in range(node_count)]
 
     num_trees = node_count
@@ -168,12 +165,17 @@ def simulate(node_count):
 
     print(total_weight)
 
+def simulate_random_graph(node_count):
+    G = generate_graph(node_count, 3, 0.5)
+    adj_matrix = serialize_graph(G)
+
+    simulate_with_graph(node_count, adj_matrix)
 
 if __name__ == "__main__":
     num_sim = 1 # The number of simulation runs, set it to 3 during development otherwise you will wait for a long time
 
     print("Simulation started:")
-    simulate(4)
+    simulate_random_graph(4)
 
     # for n in range(36,64,4): # Node counts for experimenting various graph sizes
     #     for i in range(num_sim):
