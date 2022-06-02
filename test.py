@@ -77,7 +77,7 @@ def run_test(node_count, edges, expected_result):
     assert result == expected_result
 
     print(f"test for fhe with node {node_count}")
-    num_e, w, _ = simulate_with_graph(node_count, adj_matrix)
+    num_e, w, _, _, _ = simulate_with_graph(node_count, adj_matrix)
     assert (num_e, w) == expected_result
 
 if __name__ == '__main__':

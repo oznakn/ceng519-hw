@@ -1,6 +1,11 @@
+import os
 import timeit
 import random
+import csv
+
 import networkx as nx
+
+from datetime import datetime
 
 from eva import EvaProgram, Input, Output, evaluate
 from eva.ckks import CKKSCompiler
@@ -161,15 +166,13 @@ def simulate_with_graph(node_count, adj_matrix):
 
     compiled_func, public_ctx, secret_ctx, signature, compilation_time, keygen_time = prepare_simulation(node_count)
 
-    collected_data = {
+    collected_data1 = [{
+        "node_count": node_count,
         "compilation_time": compilation_time,
         "keygen_time": keygen_time,
-        "enc_time": [],
-        "execute_time": [],
-        "dec_time": [],
-        "ref_time": [],
-        "mse": [],
-    }
+    }]
+    collected_data2 = []
+    collected_data3 = []
 
     parent = [i for i in range(node_count)]
     rank = [0 for _ in range(node_count)]
@@ -183,11 +186,14 @@ def simulate_with_graph(node_count, adj_matrix):
 
         data = adj_matrix + calculate_all_parents(parent)
         results, enc_time, execute_time, dec_time, ref_time, mse = simulate_step(compiled_func, public_ctx, secret_ctx, signature, data)
-        collected_data["enc_time"].append(enc_time)
-        collected_data["execute_time"].append(execute_time)
-        collected_data["dec_time"].append(dec_time)
-        collected_data["ref_time"].append(ref_time)
-        collected_data["mse"].append(mse)
+        collected_data2.append({
+            "node_count": node_count,
+            "enc_time": enc_time,
+            "execute_time": execute_time,
+            "dec_time": dec_time,
+            "ref_time": ref_time,
+            "mse": mse,
+        })
 
         for u, v, w, s1, s2 in results:
             if cheapest[s1] == -1 or cheapest[s1][2] > w:
@@ -198,11 +204,14 @@ def simulate_with_graph(node_count, adj_matrix):
 
         data = convert_cheapest_to_matrix(cheapest) + calculate_all_parents(parent)
         results, enc_time, execute_time, dec_time, ref_time, mse = simulate_step(compiled_func, public_ctx, secret_ctx, signature, data)
-        collected_data["enc_time"].append(enc_time)
-        collected_data["execute_time"].append(execute_time)
-        collected_data["dec_time"].append(dec_time)
-        collected_data["ref_time"].append(ref_time)
-        collected_data["mse"].append(mse)
+        collected_data3.append({
+            "node_count": node_count,
+            "enc_time": enc_time,
+            "execute_time": execute_time,
+            "dec_time": dec_time,
+            "ref_time": ref_time,
+            "mse": mse,
+        })
 
         for u, v, w, s1, s2 in results:
             total_weight += w
@@ -212,7 +221,7 @@ def simulate_with_graph(node_count, adj_matrix):
             action_union(parent, rank, s1, s2)
             print (f"Edge {u}-{v} with weight {w} included in MST")
 
-    return num_total_edge, total_weight, collected_data
+    return num_total_edge, total_weight, collected_data1, collected_data2, collected_data3
 
 def simulate_random_graph(node_count):
     G = generate_graph(node_count, 3, 0.5)
@@ -220,12 +229,34 @@ def simulate_random_graph(node_count):
 
     return simulate_with_graph(node_count, adj_matrix)
 
+RESULT_FILE_HEADERS = [
+    ["node_count", "compilation_time", "keygen_time"],
+    ["node_count", "enc_time", "execute_time", "dec_time", "ref_time", "mse"],
+    ["node_count", "enc_time", "execute_time", "dec_time", "ref_time", "mse"],
+]
+
 if __name__ == "__main__":
-    num_sim = 1 # The number of simulation runs, set it to 3 during development otherwise you will wait for a long time
+    num_sim = 1 # 3
 
-    print("Simulation started:")
-    print(simulate_random_graph(4))
+    print("Simulation started")
 
-    # for n in range(36,64,4): # Node counts for experimenting various graph sizes
-    #     for i in range(num_sim):
-    #     break # TODO: remove
+    collected_data = [[], [], []]
+
+    for node_count in [4]: # range(36, 64, 4):
+        for _ in range(num_sim):
+            num_total_edge, total_weight, collected_data1, collected_data2, collected_data3 = simulate_random_graph(node_count)
+
+            collected_data[0] += collected_data1
+            collected_data[1] += collected_data2
+            collected_data[2] += collected_data3
+
+    ts = int(datetime.timestamp(datetime.now()))
+
+    os.mkdir(f"results_stage2/{ts}")
+
+    for i in range(3):
+        with open(f"results_stage2/{ts}/results{i}.csv", "w") as csv_file:
+            w = csv.DictWriter(csv_file, fieldnames=RESULT_FILE_HEADERS[i])
+            w.writeheader()
+            w.writerows(collected_data[i])
+
