@@ -242,7 +242,7 @@ if __name__ == "__main__":
 
     collected_data = [[], [], []]
 
-    for node_count in [4]: # range(36, 64, 4):
+    for node_count in range(36, 64, 4):
         for _ in range(num_sim):
             num_total_edge, total_weight, collected_data1, collected_data2, collected_data3 = simulate_random_graph(node_count)
 
