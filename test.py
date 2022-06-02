@@ -67,33 +67,25 @@ def boruvka(node_count, adj_matrix):
 
     return (num_total_edge, total_weight)
 
+def run_test(node_count, edges, expected_result):
+    adj_matrix = [0 for _ in range(node_count*node_count)]
+    for u, v, w in edges:
+        adj_matrix[u*node_count + v] = w
+
+    print(f"test for raw with node {node_count}")
+    result = boruvka(node_count, adj_matrix)
+    assert result == expected_result
+
+    print(f"test for fhe with node {node_count}")
+    num_e, w, _ = simulate_with_graph(node_count, adj_matrix)
+    assert (num_e, w) == expected_result
+
 if __name__ == '__main__':
     node_count = 4
     edges = [(0, 1, 10), (0, 2, 6), (0, 3, 5), (1, 3, 15), (2, 3, 4)]
 
-    adj_matrix = [0 for _ in range(node_count*node_count)]
-    for u, v, w in edges:
-        adj_matrix[u*node_count + v] = w
-
-    print('test for raw with node 4')
-    result = boruvka(node_count, adj_matrix)
-    assert result == (3, 19)
-
-    print('test for fhe with node 4')
-    result = simulate_with_graph(node_count, adj_matrix)
-    assert result == (3, 19)
+    run_test(node_count, edges, (3, 19))
 
     node_count = 5
     edges = [(0, 1, 8), (0, 2, 5), (1, 2, 9), (1, 3, 11), (2, 3, 15), (2, 4, 10), (3, 4, 7)]
-
-    adj_matrix = [0 for _ in range(node_count*node_count)]
-    for u, v, w in edges:
-        adj_matrix[u*node_count + v] = w
-
-    print('test for raw with node 5')
-    result = boruvka(node_count, adj_matrix)
-    assert result == (4, 30)
-
-    print('test for fhe with node 5')
-    result = simulate_with_graph(node_count, adj_matrix)
-    assert result == (4, 30)
+    run_test(node_count, edges, (4, 30))

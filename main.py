@@ -1,4 +1,5 @@
 import timeit
+import random
 import networkx as nx
 
 from eva import EvaProgram, Input, Output, evaluate
@@ -30,8 +31,8 @@ def serialize_graph(G):
 
     for row in range(node_count):
         for column in range(node_count):
-            if G.has_edge(row, column): #  or row == column# I assumed the vertices are connected to themselves
-                adj_matrix[row*node_count + column] = 1
+            if G.has_edge(row, column):
+                adj_matrix[row*node_count + column] = random.randint(1, 25)
                 total_edge_count += 1
 
     print('created a graph with total edge count: ', total_edge_count)
@@ -109,18 +110,37 @@ def prepare_simulation(node_count):
     eva_prog.set_output_ranges(30)
     eva_prog.set_input_scales(30)
 
+    start_time = timeit.default_timer()
     compiled_func, params, signature = compiler.compile(eva_prog)
-    public_ctx, secret_ctx = generate_keys(params)
+    compilation_time = (timeit.default_timer() - start_time) * 1000.0
 
-    return compiled_func, public_ctx, secret_ctx, signature
+    start_time = timeit.default_timer()
+    public_ctx, secret_ctx = generate_keys(params)
+    keygen_time = (timeit.default_timer() - start_time) * 1000.0
+
+    return compiled_func, public_ctx, secret_ctx, signature, compilation_time, keygen_time
 
 def simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
     inputs = {"data": data + [0 for _ in range(VEC_SIZE - len(data))]}
     assert(len(inputs["data"]) == VEC_SIZE)
 
+    start_time = timeit.default_timer()
     enc_inputs = public_ctx.encrypt(inputs, signature)
+    enc_time = (timeit.default_timer() - start_time) * 1000.0
+
+    start_time = timeit.default_timer()
     enc_outputs = public_ctx.execute(compiled_func, enc_inputs)
+    execute_time = (timeit.default_timer() - start_time) * 1000.0
+
+    start_time = timeit.default_timer()
     outputs = secret_ctx.decrypt(enc_outputs, signature)
+    dec_time = (timeit.default_timer() - start_time) * 1000.0
+
+    start_time = timeit.default_timer()
+    reference = evaluate(compiled_func, inputs)
+    ref_time = (timeit.default_timer() - start_time) * 1000.0
+
+    mse = valuation_mse(outputs, reference)
 
     result = []
     for i in range(round(outputs["ResultSize"][0])):
@@ -134,12 +154,22 @@ def simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
         if s1 != s2 and w > 0:
             result.append((u, v, w, s1, s2))
 
-    return result
+    return result, enc_time, execute_time, dec_time, ref_time, mse
 
 def simulate_with_graph(node_count, adj_matrix):
     print("Will start simulation for ", node_count)
 
-    compiled_func, public_ctx, secret_ctx, signature = prepare_simulation(node_count)
+    compiled_func, public_ctx, secret_ctx, signature, compilation_time, keygen_time = prepare_simulation(node_count)
+
+    collected_data = {
+        "compilation_time": compilation_time,
+        "keygen_time": keygen_time,
+        "enc_time": [],
+        "execute_time": [],
+        "dec_time": [],
+        "ref_time": [],
+        "mse": [],
+    }
 
     parent = [i for i in range(node_count)]
     rank = [0 for _ in range(node_count)]
@@ -152,7 +182,14 @@ def simulate_with_graph(node_count, adj_matrix):
         cheapest = [-1 for _ in range(node_count)]
 
         data = adj_matrix + calculate_all_parents(parent)
-        for u, v, w, s1, s2 in simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
+        results, enc_time, execute_time, dec_time, ref_time, mse = simulate_step(compiled_func, public_ctx, secret_ctx, signature, data)
+        collected_data["enc_time"].append(enc_time)
+        collected_data["execute_time"].append(execute_time)
+        collected_data["dec_time"].append(dec_time)
+        collected_data["ref_time"].append(ref_time)
+        collected_data["mse"].append(mse)
+
+        for u, v, w, s1, s2 in results:
             if cheapest[s1] == -1 or cheapest[s1][2] > w:
                 cheapest[s1] = [u, v, w]
 
@@ -160,7 +197,14 @@ def simulate_with_graph(node_count, adj_matrix):
                 cheapest[s2] = [u, v, w]
 
         data = convert_cheapest_to_matrix(cheapest) + calculate_all_parents(parent)
-        for u, v, w, s1, s2 in simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
+        results, enc_time, execute_time, dec_time, ref_time, mse = simulate_step(compiled_func, public_ctx, secret_ctx, signature, data)
+        collected_data["enc_time"].append(enc_time)
+        collected_data["execute_time"].append(execute_time)
+        collected_data["dec_time"].append(dec_time)
+        collected_data["ref_time"].append(ref_time)
+        collected_data["mse"].append(mse)
+
+        for u, v, w, s1, s2 in results:
             total_weight += w
             num_trees -= 1
             num_total_edge += 1
@@ -168,7 +212,7 @@ def simulate_with_graph(node_count, adj_matrix):
             action_union(parent, rank, s1, s2)
             print (f"Edge {u}-{v} with weight {w} included in MST")
 
-    return (num_total_edge, total_weight)
+    return num_total_edge, total_weight, collected_data
 
 def simulate_random_graph(node_count):
     G = generate_graph(node_count, 3, 0.5)
