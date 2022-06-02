@@ -143,31 +143,46 @@ def simulate_with_graph(node_count, adj_matrix):
 
     parent = [i for i in range(node_count)]
     rank = [0 for _ in range(node_count)]
-    cheapest = [-1 for _ in range(node_count)]
 
     num_trees = node_count
     total_weight = 0
     num_total_edge = 0
 
     while num_trees > 1:
-        old_num_trees = num_trees
+        cheapest = [-1 for _ in range(node_count)]
 
-        data = adj_matrix + calculate_all_parents(parent)
-        for u, v, w, s1, s2 in simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
-            if cheapest[s1] == -1 or cheapest[s1][2] > w:
-                print(s1, u, v, w)
-                cheapest[s1] = [u, v, w]
+        while True:
+            skip = True
+            data = adj_matrix + calculate_all_parents(parent)
 
-            if cheapest[s2] == -1 or cheapest[s2][2] > w:
-                print(s2, u, v, w)
-                cheapest[s2] = [u, v, w]
+            for u, v, w, s1, s2 in simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
+                if cheapest[s1] == -1 or cheapest[s1][2] > w:
+                    cheapest[s1] = [u, v, w]
+                    skip = False
 
-        data = convert_cheapest_to_matrix(cheapest) + calculate_all_parents(parent)
-        for u, v, w, s1, s2 in simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
-            total_weight += w
-            num_trees -= 1
-            num_total_edge += 1
-            action_union(parent, rank, s1, s2)
+                if cheapest[s2] == -1 or cheapest[s2][2] > w:
+                    cheapest[s2] = [u, v, w]
+                    skip = False
+
+            if skip:
+                break
+
+        while True:
+            skip = True
+            data = convert_cheapest_to_matrix(cheapest) + calculate_all_parents(parent)
+
+            for u, v, w, s1, s2 in simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
+                total_weight += w
+                num_trees -= 1
+                num_total_edge += 1
+
+                action_union(parent, rank, s1, s2)
+                print (f"Edge {u}-{v} with weight {w} included in MST")
+
+                skip = False
+
+            if skip:
+                break
 
     return (num_total_edge, total_weight)
 

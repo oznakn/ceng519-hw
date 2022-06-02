@@ -43,11 +43,9 @@ def boruvka(node_count, adj_matrix):
 
                     if set1 != set2:
                         if cheapest[set1] == -1 or cheapest[set1][2] > w:
-                            print(set1, u, v, w)
                             cheapest[set1] = [u, v, w]
 
                         if cheapest[set2] == -1 or cheapest[set2][2] > w:
-                            print(set2, u, v, w)
                             cheapest[set2] = [u, v, w]
 
         for i in range(node_count):
