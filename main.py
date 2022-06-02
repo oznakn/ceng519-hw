@@ -6,8 +6,6 @@ from eva.ckks import CKKSCompiler
 from eva.seal import generate_keys
 from eva.metric import valuation_mse
 
-from test import union
-
 VEC_SIZE = 4096
 
 compiler_config = {}
@@ -63,10 +61,11 @@ def convert_cheapest_to_matrix(cheapest):
 
     return result
 
+def action_union(parent, rank, x, y):
+    computed_parents = calculate_all_parents(parent)
 
-def action_union(computed_parent, parent, rank, x, y):
-    x_root = computed_parent[x]
-    y_root = computed_parent[y]
+    x_root = computed_parents[x]
+    y_root = computed_parents[y]
 
     if x_root != y_root:
         if rank[x_root] < rank[y_root]:
@@ -77,30 +76,26 @@ def action_union(computed_parent, parent, rank, x, y):
             parent[y_root] = x_root
             rank[x_root] += 1
 
-def graph_boruvka(node_count, data):
+def prepare_simulation(node_count):
     parent_data_head = node_count*node_count
 
-    result = []
-
-    for u in range(node_count):
-        for v in range(node_count):
-            if u == v:
-                continue
-
-            w = data << (u*node_count + v)
-
-            set1 = data << (parent_data_head + u)
-            set2 = data << (parent_data_head + v)
-
-            result.append((u, v, w, set1, set2))
-
-    return result
-
-def prepare_simulation(node_count):
     eva_prog = EvaProgram("graph_boruvka", vec_size=VEC_SIZE)
     with eva_prog:
         data = Input('data')
-        result = graph_boruvka(node_count, data)
+
+        result = []
+
+        for u in range(node_count):
+            for v in range(node_count):
+                if u == v:
+                    continue
+
+                w = data << (u*node_count + v)
+
+                set1 = data << (parent_data_head + u)
+                set2 = data << (parent_data_head + v)
+
+                result.append((u, v, w, set1, set2))
 
         Output("ResultSize", len(result))
 
@@ -118,6 +113,27 @@ def prepare_simulation(node_count):
     public_ctx, secret_ctx = generate_keys(params)
 
     return compiled_func, public_ctx, secret_ctx, signature
+
+def simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
+    inputs = {"data": data + [0 for _ in range(VEC_SIZE - len(data))]}
+
+    enc_inputs = public_ctx.encrypt(inputs, signature)
+    enc_outputs = public_ctx.execute(compiled_func, enc_inputs)
+    outputs = secret_ctx.decrypt(enc_outputs, signature)
+
+    result = []
+    for i in range(round(outputs["ResultSize"][0])):
+        u = round(outputs[f"Result_{i}_u"][0])
+        v = round(outputs[f"Result_{i}_v"][0])
+        w = round(outputs[f"Result_{i}_w"][0])
+
+        s1 = round(outputs[f"Result_{i}_s1"][0])
+        s2 = round(outputs[f"Result_{i}_s2"][0])
+
+        if s1 != s2 and w > 0:
+            result.append((u, v, w, s1, s2))
+
+    return result
 
 # Repeat the experiments and show averages with confidence intervals
 # You can modify the input parameters
@@ -140,49 +156,20 @@ def simulate(node_count):
 
     while num_trees > 1:
         data = adj_matrix + calculate_all_parents(parent)
-        inputs = {"data": data + [0 for _ in range(VEC_SIZE - len(data))]}
 
-        enc_inputs = public_ctx.encrypt(inputs, signature)
-        enc_outputs = public_ctx.execute(compiled_func, enc_inputs)
-        outputs = secret_ctx.decrypt(enc_outputs, signature)
+        for u, v, w, s1, s2 in simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
+            if cheapest[s1] == -1 or cheapest[s1][2] > w:
+                cheapest[s1] = [u, v, w]
 
-        num_result = round(outputs["ResultSize"][0])
-        for i in range(num_result):
-            u = round(outputs[f"Result_{i}_u"][0])
-            v = round(outputs[f"Result_{i}_v"][0])
-            w = round(outputs[f"Result_{i}_w"][0])
-
-            s1 = round(outputs[f"Result_{i}_s1"][0])
-            s2 = round(outputs[f"Result_{i}_s2"][0])
-
-            if s1 != s2 and w > 0:
-                if cheapest[s1] == -1 or cheapest[s1][2] > w:
-                    cheapest[s1] = [u, v, w]
-
-                if cheapest[s2] == -1 or cheapest[s2][2] > w:
-                    cheapest[s2] = [u, v, w]
-
+            if cheapest[s2] == -1 or cheapest[s2][2] > w:
+                cheapest[s2] = [u, v, w]
 
         data = convert_cheapest_to_matrix(cheapest) + calculate_all_parents(parent)
-        inputs = {"data": data + [0 for _ in range(VEC_SIZE - len(data))]}
 
-        enc_inputs = public_ctx.encrypt(inputs, signature)
-        enc_outputs = public_ctx.execute(compiled_func, enc_inputs)
-        outputs = secret_ctx.decrypt(enc_outputs, signature)
-
-        num_result = round(outputs["ResultSize"][0])
-        for i in range(num_result):
-            u = round(outputs[f"Result_{i}_u"][0])
-            v = round(outputs[f"Result_{i}_v"][0])
-            w = round(outputs[f"Result_{i}_w"][0])
-
-            s1 = round(outputs[f"Result_{i}_s1"][0])
-            s2 = round(outputs[f"Result_{i}_s2"][0])
-
-            if s1 != s2 and w > 0:
-                total_weight += w
-                num_trees -= 1
-                union(parent, rank, s1, s2)
+        for u, v, w, s1, s2 in simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
+            total_weight += w
+            num_trees -= 1
+            action_union(parent, rank, s1, s2)
 
     print(total_weight)
 
