@@ -147,6 +147,7 @@ def simulate_with_graph(node_count, adj_matrix):
 
     num_trees = node_count
     total_weight = 0
+    num_total_edge = 0
 
     while num_trees > 1:
         data = adj_matrix + calculate_all_parents(parent)
@@ -161,21 +162,22 @@ def simulate_with_graph(node_count, adj_matrix):
         for u, v, w, s1, s2 in simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
             total_weight += w
             num_trees -= 1
+            num_total_edge += 1
             action_union(parent, rank, s1, s2)
 
-    print(total_weight)
+    return (num_total_edge, total_weight)
 
 def simulate_random_graph(node_count):
     G = generate_graph(node_count, 3, 0.5)
     adj_matrix = serialize_graph(G)
 
-    simulate_with_graph(node_count, adj_matrix)
+    return simulate_with_graph(node_count, adj_matrix)
 
 if __name__ == "__main__":
     num_sim = 1 # The number of simulation runs, set it to 3 during development otherwise you will wait for a long time
 
     print("Simulation started:")
-    simulate_random_graph(4)
+    print(simulate_random_graph(4))
 
     # for n in range(36,64,4): # Node counts for experimenting various graph sizes
     #     for i in range(num_sim):
