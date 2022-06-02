@@ -116,6 +116,7 @@ def prepare_simulation(node_count):
 
 def simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
     inputs = {"data": data + [0 for _ in range(VEC_SIZE - len(data))]}
+    assert(len(inputs["data"]) == VEC_SIZE)
 
     enc_inputs = public_ctx.encrypt(inputs, signature)
     enc_outputs = public_ctx.execute(compiled_func, enc_inputs)
@@ -135,10 +136,6 @@ def simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
 
     return result
 
-# Repeat the experiments and show averages with confidence intervals
-# You can modify the input parameters
-# n is the number of nodes in your graph
-# If you require additional parameters, add them
 def simulate(node_count):
     print("Will start simulation for ", node_count)
 
@@ -156,7 +153,6 @@ def simulate(node_count):
 
     while num_trees > 1:
         data = adj_matrix + calculate_all_parents(parent)
-
         for u, v, w, s1, s2 in simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
             if cheapest[s1] == -1 or cheapest[s1][2] > w:
                 cheapest[s1] = [u, v, w]
@@ -165,7 +161,6 @@ def simulate(node_count):
                 cheapest[s2] = [u, v, w]
 
         data = convert_cheapest_to_matrix(cheapest) + calculate_all_parents(parent)
-
         for u, v, w, s1, s2 in simulate_step(compiled_func, public_ctx, secret_ctx, signature, data):
             total_weight += w
             num_trees -= 1
