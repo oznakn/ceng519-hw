@@ -6,6 +6,8 @@ from eva.ckks import CKKSCompiler
 from eva.seal import generate_keys
 from eva.metric import valuation_mse
 
+from test import union
+
 VEC_SIZE = 4096
 
 compiler_config = {}
@@ -48,6 +50,20 @@ def pre_compute_parent(parent):
 
     return result
 
+def convert_cheapest_to_matrix(cheapest):
+    node_count = len(cheapest)
+
+    result = [0 for _ in range(node_count*node_count)]
+
+    for i in range(node_count):
+        if cheapest[i] != -1:
+            u, v, w = cheapest[i]
+
+            result[u*node_count + v] = w
+
+    return result
+
+
 def action_union(computed_parent, parent, rank, x, y):
     x_root = computed_parent[x]
     y_root = computed_parent[y]
@@ -61,7 +77,7 @@ def action_union(computed_parent, parent, rank, x, y):
             parent[y_root] = x_root
             rank[x_root] += 1
 
-def graph_boruvka_1(node_count, data):
+def graph_boruvka(node_count, data):
     parent_data_head = node_count*node_count
 
     result = []
@@ -76,41 +92,92 @@ def graph_boruvka_1(node_count, data):
             set1 = data << (parent_data_head + u)
             set2 = data << (parent_data_head + v)
 
-            result.append((set1, set2, w))
+            result.append((u, v, w, set1, set2))
 
     return result
 
-def step(public_ctx, secret_ctx, signature, compiled_func, inputs):
-    encInputs = public_ctx.encrypt(inputs, signature)
-    encOutputs = public_ctx.execute(compiled_func, encInputs)
+def step(compiled_func, public_ctx, secret_ctx, signature, adj_matrix, parent, rank, cheapest):
+    total_weight = 0
 
-    outputs = secret_ctx.decrypt(encOutputs, signature)
+    data = adj_matrix + pre_compute_parent(parent)
+    inputs = {"data": data + [0 for _ in range(VEC_SIZE - len(data))]}
 
-    reference = evaluate(compiled_func, inputs)
+    enc_inputs = public_ctx.encrypt(inputs, signature)
+    enc_outputs = public_ctx.execute(compiled_func, enc_inputs)
+    outputs = secret_ctx.decrypt(enc_outputs, signature)
+    # reference = evaluate(compiled_func, inputs)
 
-    # Change this if you want to output something or comment out the two lines below
-    for key in outputs:
-        print(key, float(outputs[key][0]), float(reference[key][0]))
+    num_result = round(outputs["ResultSize"][0])
+    for i in range(num_result):
+        u = round(outputs[f"Result_{i}_u"][0])
+        v = round(outputs[f"Result_{i}_v"][0])
+        w = round(outputs[f"Result_{i}_w"][0])
 
+        s1 = round(outputs[f"Result_{i}_s1"][0])
+        s2 = round(outputs[f"Result_{i}_s2"][0])
+
+        if s1 != s2 and w > 0:
+            if cheapest[s1] == -1 or cheapest[s1 + 2] > w:
+                cheapest[s1] = u
+                cheapest[s1 + 1] = v
+                cheapest[s1 + 2] = w
+
+            if cheapest[s2] == -1 or cheapest[s2 + 2] > w:
+                cheapest[s2] = u
+                cheapest[s2 + 1] = v
+                cheapest[s2 + 2] = w
+
+    print(cheapest)
+
+    data = convert_cheapest_to_matrix(cheapest) + pre_compute_parent(parent)
+    inputs = {"data": data + [0 for _ in range(VEC_SIZE - len(data))]}
+
+    enc_inputs = public_ctx.encrypt(inputs, signature)
+    enc_outputs = public_ctx.execute(compiled_func, enc_inputs)
+    outputs = secret_ctx.decrypt(enc_outputs, signature)
+    # reference = evaluate(compiled_func, inputs)
+
+    num_result = round(outputs["ResultSize"][0])
+    for i in range(num_result):
+        u = round(outputs[f"Result_{i}_u"][0])
+        v = round(outputs[f"Result_{i}_v"][0])
+        w = round(outputs[f"Result_{i}_w"][0])
+
+        s1 = round(outputs[f"Result_{i}_s1"][0])
+        s2 = round(outputs[f"Result_{i}_s2"][0])
+
+        if s1 != s2 and w > 0:
+            total_weight += w
+            union(parent, rank, s1, s2)
+
+    # # Change this if you want to output something or comment out the two lines below
+    # for key in outputs:
+    #     print(key, int(reference[key][0])) # float(outputs[key][0]),
+
+    print(total_weight)
 
 def prepare_simulation(node_count):
-    eva_prog_1 = EvaProgram("graph_boruvka_1", vec_size=VEC_SIZE)
-    with eva_prog_1:
+    eva_prog = EvaProgram("graph_boruvka", vec_size=VEC_SIZE)
+    with eva_prog:
         data = Input('data')
-        result = graph_boruvka_1(node_count, data)
+        result = graph_boruvka(node_count, data)
+
+        Output("ResultSize", len(result))
 
         for i in range(len(result)):
-            Output(f"Result_{i}_s1", result[i][0])
-            Output(f"Result_{i}_s2", result[i][1])
+            Output(f"Result_{i}_u", result[i][0])
+            Output(f"Result_{i}_v", result[i][1])
             Output(f"Result_{i}_w", result[i][2])
+            Output(f"Result_{i}_s1", result[i][3])
+            Output(f"Result_{i}_s2", result[i][4])
 
-    eva_prog_1.set_output_ranges(30)
-    eva_prog_1.set_input_scales(30)
+    eva_prog.set_output_ranges(30)
+    eva_prog.set_input_scales(30)
 
-    compiled_func_1, params, signature = compiler.compile(eva_prog_1)
+    compiled_func, params, signature = compiler.compile(eva_prog)
     public_ctx, secret_ctx = generate_keys(params)
 
-    return compiled_func_1, public_ctx, secret_ctx, signature
+    return compiled_func, public_ctx, secret_ctx, signature
 
 # Repeat the experiments and show averages with confidence intervals
 # You can modify the input parameters
@@ -119,19 +186,17 @@ def prepare_simulation(node_count):
 def simulate(node_count):
     print("Will start simulation for ", node_count)
 
-    compiled_func_1, public_ctx, secret_ctx, signature = prepare_simulation(node_count)
+    compiled_func, public_ctx, secret_ctx, signature = prepare_simulation(node_count)
 
     G = generate_graph(node_count, 3, 0.5)
     adj_matrix = serialize_graph(G)
 
     parent = [i for i in range(node_count)]
+    rank = [0 for i in range(node_count)]
     cheapest = [-1 for _ in range(node_count)]
 
     while True:
-        data = adj_matrix + pre_compute_parent(parent) + cheapest
-        data += [0 for _ in range(VEC_SIZE - len(data))]
-
-        step(public_ctx, secret_ctx, signature, compiled_func_1, {"data": data})
+        step(compiled_func, public_ctx, secret_ctx, signature, adj_matrix, parent, rank, cheapest)
         break
 
 
