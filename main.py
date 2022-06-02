@@ -40,7 +40,7 @@ def serialize_graph(G):
 
     return adj_matrix
 
-def pre_compute_parent(parent):
+def calculate_all_parents(parent):
     result = []
 
     for u in range(len(parent)):
@@ -96,66 +96,6 @@ def graph_boruvka(node_count, data):
 
     return result
 
-def step(compiled_func, public_ctx, secret_ctx, signature, adj_matrix, parent, rank, cheapest):
-    total_weight = 0
-
-    data = adj_matrix + pre_compute_parent(parent)
-    inputs = {"data": data + [0 for _ in range(VEC_SIZE - len(data))]}
-
-    enc_inputs = public_ctx.encrypt(inputs, signature)
-    enc_outputs = public_ctx.execute(compiled_func, enc_inputs)
-    outputs = secret_ctx.decrypt(enc_outputs, signature)
-    # reference = evaluate(compiled_func, inputs)
-
-    num_result = round(outputs["ResultSize"][0])
-    for i in range(num_result):
-        u = round(outputs[f"Result_{i}_u"][0])
-        v = round(outputs[f"Result_{i}_v"][0])
-        w = round(outputs[f"Result_{i}_w"][0])
-
-        s1 = round(outputs[f"Result_{i}_s1"][0])
-        s2 = round(outputs[f"Result_{i}_s2"][0])
-
-        if s1 != s2 and w > 0:
-            if cheapest[s1] == -1 or cheapest[s1 + 2] > w:
-                cheapest[s1] = u
-                cheapest[s1 + 1] = v
-                cheapest[s1 + 2] = w
-
-            if cheapest[s2] == -1 or cheapest[s2 + 2] > w:
-                cheapest[s2] = u
-                cheapest[s2 + 1] = v
-                cheapest[s2 + 2] = w
-
-    print(cheapest)
-
-    data = convert_cheapest_to_matrix(cheapest) + pre_compute_parent(parent)
-    inputs = {"data": data + [0 for _ in range(VEC_SIZE - len(data))]}
-
-    enc_inputs = public_ctx.encrypt(inputs, signature)
-    enc_outputs = public_ctx.execute(compiled_func, enc_inputs)
-    outputs = secret_ctx.decrypt(enc_outputs, signature)
-    # reference = evaluate(compiled_func, inputs)
-
-    num_result = round(outputs["ResultSize"][0])
-    for i in range(num_result):
-        u = round(outputs[f"Result_{i}_u"][0])
-        v = round(outputs[f"Result_{i}_v"][0])
-        w = round(outputs[f"Result_{i}_w"][0])
-
-        s1 = round(outputs[f"Result_{i}_s1"][0])
-        s2 = round(outputs[f"Result_{i}_s2"][0])
-
-        if s1 != s2 and w > 0:
-            total_weight += w
-            union(parent, rank, s1, s2)
-
-    # # Change this if you want to output something or comment out the two lines below
-    # for key in outputs:
-    #     print(key, int(reference[key][0])) # float(outputs[key][0]),
-
-    print(total_weight)
-
 def prepare_simulation(node_count):
     eva_prog = EvaProgram("graph_boruvka", vec_size=VEC_SIZE)
     with eva_prog:
@@ -195,9 +135,56 @@ def simulate(node_count):
     rank = [0 for i in range(node_count)]
     cheapest = [-1 for _ in range(node_count)]
 
-    while True:
-        step(compiled_func, public_ctx, secret_ctx, signature, adj_matrix, parent, rank, cheapest)
-        break
+    num_trees = node_count
+    total_weight = 0
+
+    while num_trees > 1:
+        data = adj_matrix + calculate_all_parents(parent)
+        inputs = {"data": data + [0 for _ in range(VEC_SIZE - len(data))]}
+
+        enc_inputs = public_ctx.encrypt(inputs, signature)
+        enc_outputs = public_ctx.execute(compiled_func, enc_inputs)
+        outputs = secret_ctx.decrypt(enc_outputs, signature)
+
+        num_result = round(outputs["ResultSize"][0])
+        for i in range(num_result):
+            u = round(outputs[f"Result_{i}_u"][0])
+            v = round(outputs[f"Result_{i}_v"][0])
+            w = round(outputs[f"Result_{i}_w"][0])
+
+            s1 = round(outputs[f"Result_{i}_s1"][0])
+            s2 = round(outputs[f"Result_{i}_s2"][0])
+
+            if s1 != s2 and w > 0:
+                if cheapest[s1] == -1 or cheapest[s1][2] > w:
+                    cheapest[s1] = [u, v, w]
+
+                if cheapest[s2] == -1 or cheapest[s2][2] > w:
+                    cheapest[s2] = [u, v, w]
+
+
+        data = convert_cheapest_to_matrix(cheapest) + calculate_all_parents(parent)
+        inputs = {"data": data + [0 for _ in range(VEC_SIZE - len(data))]}
+
+        enc_inputs = public_ctx.encrypt(inputs, signature)
+        enc_outputs = public_ctx.execute(compiled_func, enc_inputs)
+        outputs = secret_ctx.decrypt(enc_outputs, signature)
+
+        num_result = round(outputs["ResultSize"][0])
+        for i in range(num_result):
+            u = round(outputs[f"Result_{i}_u"][0])
+            v = round(outputs[f"Result_{i}_v"][0])
+            w = round(outputs[f"Result_{i}_w"][0])
+
+            s1 = round(outputs[f"Result_{i}_s1"][0])
+            s2 = round(outputs[f"Result_{i}_s2"][0])
+
+            if s1 != s2 and w > 0:
+                total_weight += w
+                num_trees -= 1
+                union(parent, rank, s1, s2)
+
+    print(total_weight)
 
 
 if __name__ == "__main__":
