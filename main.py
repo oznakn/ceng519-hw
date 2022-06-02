@@ -13,17 +13,22 @@ def generate_graph(n: int, k: int, p: int):
     return G
 
 def serialize_graph(G, vec_size):
-    edge_list = []
+    node_count = G.size()
+    total_edge_count = 0
 
-    for row in range(G.size()):
-        for column in range(G.size()):
+    adj_matrix = [0 for _ in range(node_count*node_count)]
+
+    for row in range(node_count):
+        for column in range(node_count):
             if G.has_edge(row, column): #  or row == column# I assumed the vertices are connected to themselves
-                edge_list += [row, column, 1]
+                adj_matrix[row*node_count + column] = 1
+                total_edge_count += 1
 
-    for _ in range(vec_size - len(edge_list)):
-        edge_list.append(0)
+    adj_matrix += [0 for _ in range(vec_size - len(adj_matrix))]
 
-    return edge_list
+    print('created a graph with total edge count: ', total_edge_count)
+
+    return adj_matrix
 
 def pre_compute_parent(parent, vec_size):
     result = []
@@ -51,19 +56,25 @@ def action_union(computed_parent, parent, rank, x, y):
             parent[y_root] = x_root
             rank[x_root] += 1
 
-def graph_boruvka_1(node_count, edge_count, data):
+def graph_boruvka_1(node_count, data):
+    parent_data_head = node_count*node_count
     cheapest = [-1 for _ in range(node_count)]
 
-    for i in range(0, edge_count, 3):
-        u = data << i
-        v = data << (i + 1)
-        w = data << (i + 2)
+    result = 0
 
-        set1 = data << (edge_count + u)
-        set2 = data << (edge_count + v)
+    for u in range(node_count):
+        for v in range(node_count):
+            if u == v:
+                continue
 
-        return (set1, set2)
+            w = data << (u*node_count + v)
 
+            set1 = data << (parent_data_head + u)
+            set2 = data << (parent_data_head + v)
+
+            result += w
+
+    return result
 
 def step(public_ctx, secret_ctx, signature, compiled_func, inputs):
     encInputs = public_ctx.encrypt(inputs, signature)
@@ -96,18 +107,16 @@ def simulate(node_count):
     vec_size = 4096
 
     G = generate_graph(node_count, 3, 0.5)
-    edge_list = serialize_graph(G, vec_size // 2)
+    adj_matrix = serialize_graph(G, vec_size // 2)
 
-    edge_count = len(edge_list)
     parent = [i for i in range(node_count)]
 
     eva_prog_1 = EvaProgram("graph_boruvka_1", vec_size=vec_size)
     with eva_prog_1:
         data = Input('data')
-        reval, x = graph_boruvka_1(node_count, edge_count, data)
+        reval = graph_boruvka_1(node_count, data)
 
         Output('ReturnedValue', reval)
-        Output('X', x)
 
     eva_prog_1.set_output_ranges(30)
     eva_prog_1.set_input_scales(30)
@@ -116,7 +125,7 @@ def simulate(node_count):
     public_ctx, secret_ctx = generate_keys(params)
 
     while True:
-        inputs = {"data": edge_list + pre_compute_parent(parent, vec_size // 2)}
+        inputs = {"data": adj_matrix + pre_compute_parent(parent, vec_size // 2)}
 
         step(public_ctx, secret_ctx, signature, compiled_func_1, inputs)
         break
