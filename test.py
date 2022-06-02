@@ -16,34 +16,37 @@ def union(parent, rank, x, y):
             parent[y_root] = x_root
             rank[x_root] += 1
 
-def boruvka(nodes, edges):
+def boruvka(node_count, data):
     total_weight = 0
     num_total_edge = 0
 
-    num_trees = len(nodes)
+    num_trees = node_count
 
-    parent = [i for i in range(len(nodes))]
-    rank = [0 for _ in range(len(nodes))]
+    parent = [i for i in range(node_count)]
+    rank = [0 for _ in range(node_count)]
 
     while num_trees > 1:
-        cheapest = [-1 for _ in range(len(nodes))]
+        cheapest = [-1 for _ in range(node_count)]
 
-        for i in range(0, len(edges), 3):
-            u = edges[i]
-            v = edges[i + 1]
-            w = edges[i + 2]
+        for u in range(node_count):
+            for v in range(node_count):
+                if u == v:
+                    continue
 
-            set1 = find(parent, u)
-            set2 = find(parent, v)
+                w = data[u*node_count + v]
 
-            if set1 != set2:
-                if cheapest[set1] == -1 or cheapest[set1][2] > w:
-                    cheapest[set1] = [u, v, w]
+                if w > 0:
+                    set1 = find(parent, u)
+                    set2 = find(parent, v)
 
-                if cheapest[set2] == -1 or cheapest[set2][2] > w:
-                    cheapest[set2] = [u, v, w]
+                    if set1 != set2:
+                        if cheapest[set1] == -1 or cheapest[set1][2] > w:
+                            cheapest[set1] = [u, v, w]
 
-        for i in range(len(nodes)):
+                        if cheapest[set2] == -1 or cheapest[set2][2] > w:
+                            cheapest[set2] = [u, v, w]
+
+        for i in range(node_count):
             if cheapest[i] != -1:
                 u, v, w = cheapest[i]
 
@@ -63,16 +66,24 @@ def boruvka(nodes, edges):
     return (num_total_edge, total_weight)
 
 if __name__ == '__main__':
-    nodes = [0, 1, 2, 3]
-    edges = [0, 1, 10, 0, 2, 6, 0, 3, 5, 1, 3, 15, 2, 3, 4]
+    node_count = 4
+    edges = [(0, 1, 10), (0, 2, 6), (0, 3, 5), (1, 3, 15), (2, 3, 4)]
 
-    result = boruvka(nodes, edges)
+    data = [0 for _ in range(node_count*node_count)]
+    for u, v, w in edges:
+        data[u*node_count + v] = w
+
+    result = boruvka(node_count, data)
     print("total edge, weight", result)
     assert result == (3, 19)
 
-    nodes = [0, 1, 2, 3, 4]
-    edges = [0, 1, 8, 0, 2, 5, 1, 2, 9, 1, 3, 11, 2, 3, 15, 2, 4, 10, 3, 4, 7]
+    node_count = 5
+    edges = [(0, 1, 8), (0, 2, 5), (1, 2, 9), (1, 3, 11), (2, 3, 15), (2, 4, 10), (3, 4, 7)]
 
-    result = boruvka(nodes, edges)
+    data = [0 for _ in range(node_count*node_count)]
+    for u, v, w in edges:
+        data[u*node_count + v] = w
+
+    result = boruvka(node_count, data)
     print("total edge, weight", result)
     assert result == (4, 30)
