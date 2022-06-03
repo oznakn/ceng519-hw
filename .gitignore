@@ -144,5 +144,3 @@ static/
 # ide project files
 .idea/
 .vscode/
-
-results_stage2/**/*.csv
